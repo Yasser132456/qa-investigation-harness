@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title desc">
+  <title id="title">QA Investigation Harness mark</title>
+  <desc id="desc">Three connected cyan nodes representing observe, model, and challenge.</desc>
+  <rect width="512" height="512" rx="112" fill="#0b1324"/>
+  <path d="M126 256h260M174 164l164 92-164 92" fill="none" stroke="#56e0d0" stroke-linecap="round" stroke-linejoin="round" stroke-width="20"/>
+  <circle cx="126" cy="256" r="42" fill="#f2f6ff"/>
+  <circle cx="174" cy="164" r="42" fill="#56e0d0"/>
+  <circle cx="174" cy="348" r="42" fill="#56e0d0"/>
+  <circle cx="386" cy="256" r="42" fill="#f2f6ff"/>
+</svg>
