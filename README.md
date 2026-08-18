@@ -26,7 +26,7 @@ This harness never writes test code — not even the plan's own seed file.
 ## Before you start
 
 - **Playwright MCP is installed**: registered in `.vscode/mcp.json`, launched via `npx @playwright/mcp@latest` — this is separate from the `playwright-test` MCP server bundled inside `playwright-test-generator`'s own agent definition
-- **The ticket already exists**: this harness never invents a ticket ID (e.g. `CMDBTEST-1069`) — you supply one that already exists in your test management system
+- **The ticket already exists**: this harness never invents a ticket ID (e.g. `PROJ-1234`) — you supply one that already exists in your test management system
 - **Target environment**: non-production only (you'll be asked to confirm before `qa-explore` navigates)
 - **Credentials**: never written to any file — you'll be asked for them interactively at the start of `qa-explore`. The confirmed non-production URL itself *is* recorded, since the generated plan needs it, matching how your existing plans already work
 
@@ -101,20 +101,20 @@ tell it to continue to Part B:
 structure `playwright-test-planner` produces:
 
 ```markdown
-# CMDBTEST-1069 - CMDB Reconciliation Workflow
+# PROJ-1234 - Checkout Flow
 
 ## Application Overview
 <prose, written from what qa-explore actually observed>
 
 ## Test Scenarios
 
-### 1. CMDBTEST-1069 - CMDB Reconciliation Workflow
+### 1. PROJ-1234 - Checkout Flow
 
 **Seed:** `tests/seed.spec.ts`
 
 #### 1.1. TC-01: <title from an approved risk>
 
-**File:** `tests/cmdb/tc-01-....spec.ts`
+**File:** `tests/checkout/tc-01-....spec.ts`
 
 **Steps:**
   1. <verified step>

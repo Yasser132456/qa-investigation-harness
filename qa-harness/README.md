@@ -47,29 +47,29 @@ folder to use it.
 
 Example:
 ```
-/qa-explore CMDBTEST-1070 "Verify user can filter the Task List by status"
-/qa-model CMDBTEST-1070
-/qa-challenge CMDBTEST-1070
-  ↓ edit qa-artifacts/CMDBTEST-1070/risks.md by hand ↓
-/qa-challenge CMDBTEST-1070 "run Part B"
+/qa-explore PROJ-1234 "Verify user can filter the Task List by status"
+/qa-model PROJ-1234
+/qa-challenge PROJ-1234
+  ↓ edit qa-artifacts/PROJ-1234/risks.md by hand ↓
+/qa-challenge PROJ-1234 "run Part B"
 ```
 
 If you don't already have a test-generation agent for Claude Code, get one
 with `npx playwright init-agents --loop=claude`, then point it at
-`specs/CMDBTEST-1070.plan.md`.
+`specs/PROJ-1234.plan.md`.
 
 ### Codex
 
 - `AGENTS.md` (repo root) is read automatically and explains how to run a
   stage — there's no slash command; just ask in plain language, e.g. "run the
-  qa-explore stage for CMDBTEST-1070: verify user can filter the task list by
+  qa-explore stage for PROJ-1234: verify user can filter the task list by
   status"
 - Playwright MCP needs a one-time setup command — see `AGENTS.md` for the
   exact `codex mcp add` invocation
 
 If you don't already have a test-generation agent for Codex, get one with
 `npx playwright init-agents --loop=codex`, then point it at
-`specs/CMDBTEST-1070.plan.md`.
+`specs/PROJ-1234.plan.md`.
 
 ### Cursor
 

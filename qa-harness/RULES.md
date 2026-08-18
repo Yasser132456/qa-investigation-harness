@@ -12,7 +12,7 @@ format and location your project's test-generation agent already expects.
 
 ## Stage order
 
-Input: a ticket ID (e.g. CMDBTEST-1069) for a test case that already exists in
+Input: a ticket ID (e.g. PROJ-1234) for a test case that already exists in
 the test management system, plus the test case itself, supplied by the human.
 
 1. explore    — walk the live flow the test case describes, and identify any

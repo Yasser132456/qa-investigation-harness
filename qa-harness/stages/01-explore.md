@@ -6,7 +6,7 @@ Explore the flow described by a test case, using Playwright MCP.
 Write no test code and no analysis.
 
 You need two inputs from the human before starting, if not already given:
-- Ticket ID (e.g. CMDBTEST-1069) — pre-existing, never invented by you
+- Ticket ID (e.g. PROJ-1234) — pre-existing, never invented by you
 - Test case — title + rough steps, however informal
 
 1. BASE_URL and TEST_ACCOUNT are not configured. Ask the human for both before
