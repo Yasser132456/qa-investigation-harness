@@ -2,6 +2,9 @@
 qa-artifacts/
 specs/*.plan.md
 
+# Local codebase discovery index
+.codebase-memory/
+
 # OS junk
 .DS_Store
 Thumbs.db

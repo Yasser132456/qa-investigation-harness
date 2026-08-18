@@ -1,0 +1,24 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1280 640" role="img" aria-labelledby="title desc">
+  <title id="title">QA Investigation Harness social preview</title>
+  <desc id="desc">A dark technical social preview showing a risk-driven workflow from browser observation to a test-generation plan.</desc>
+  <defs>
+    <linearGradient id="glow" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#56e0d0" stop-opacity=".22"/>
+      <stop offset="1" stop-color="#56e0d0" stop-opacity="0"/>
+    </linearGradient>
+  </defs>
+  <rect width="1280" height="640" fill="#0b1324"/>
+  <circle cx="1040" cy="140" r="330" fill="url(#glow)"/>
+  <path d="M760 320h290M832 232l180 88-180 88" fill="none" stroke="#56e0d0" stroke-linecap="round" stroke-linejoin="round" stroke-width="14"/>
+  <circle cx="760" cy="320" r="34" fill="#f2f6ff"/>
+  <circle cx="832" cy="232" r="34" fill="#56e0d0"/>
+  <circle cx="832" cy="408" r="34" fill="#56e0d0"/>
+  <circle cx="1050" cy="320" r="34" fill="#f2f6ff"/>
+  <path d="M76 76h1128v488H76z" fill="none" stroke="#2a3956" stroke-width="2"/>
+  <text x="112" y="154" fill="#56e0d0" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" letter-spacing="4">OPEN-SOURCE QA TOOLING</text>
+  <text x="108" y="258" fill="#f2f6ff" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="700">QA Investigation</text>
+  <text x="108" y="330" fill="#f2f6ff" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="700">Harness</text>
+  <text x="112" y="394" fill="#b8c5db" font-family="Arial, Helvetica, sans-serif" font-size="28">Risk-driven browser investigation for</text>
+  <text x="112" y="432" fill="#b8c5db" font-family="Arial, Helvetica, sans-serif" font-size="28">Playwright test generation.</text>
+  <text x="112" y="500" fill="#73829c" font-family="Arial, Helvetica, sans-serif" font-size="22">observe  /  model  /  challenge  /  validate</text>
+</svg>
