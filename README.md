@@ -1,271 +1,202 @@
 # QA Investigation Harness
 
-A quality gate that sits **around** your existing `playwright-test-generator`
-agent — not a replacement for it. It produces the exact same artifact
-`playwright-test-planner` normally would (`specs/<ticket>.plan.md`), but built
-from a human-reviewed risk table instead of autonomous exploration.
-`playwright-test-planner` is intentionally not part of this flow — see
-**Why no playwright-test-planner?** below.
+> A risk-driven investigation layer for Playwright test generation.
 
-This harness never writes test code — not even the plan's own seed file.
+![QA Investigation Harness workflow preview](docs/assets/qa-investigation-harness-social.svg)
 
-```
-[Ticket ID + test case] → qa-explore → qa-model → qa-challenge (Part A)
-                                            ↓
-                              [HUMAN edits risks.md — APPROVE/REJECT]
-                                            ↓
-                     qa-challenge (Part B) → specs/<ticket>.plan.md
-                          (+ Generated mapping appended to risks.md)
-                                            ↓
-                [HUMAN selects playwright-test-generator from the
-             Copilot Chat agents dropdown, points it at the plan file]
-                                            ↓
-                                      qa-validate
-```
+The QA Investigation Harness turns a written test case into an evidence-backed hand-off for a separate Playwright test-generation agent. It walks the real browser flow, models the states and transitions that were observed, puts risks in front of a human for approval, and produces a plan that can be audited after generation.
 
-## Before you start
+It is deliberately small and tool-agnostic: the methodology lives in one set of stage instructions, while GitHub Copilot, Claude Code, and Codex use thin adapters around it.
 
-- **Playwright MCP is installed**: registered in `.vscode/mcp.json`, launched via `npx @playwright/mcp@latest` — this is separate from the `playwright-test` MCP server bundled inside `playwright-test-generator`'s own agent definition
-- **The ticket already exists**: this harness never invents a ticket ID (e.g. `PROJ-1234`) — you supply one that already exists in your test management system
-- **Target environment**: non-production only (you'll be asked to confirm before `qa-explore` navigates)
-- **Credentials**: never written to any file — you'll be asked for them interactively at the start of `qa-explore`. The confirmed non-production URL itself *is* recorded, since the generated plan needs it, matching how your existing plans already work
+## Why it exists
 
-## Stage 1: qa-explore
+Test generation is more useful when it starts from what the application actually did and from risks a human has consciously chosen to cover. This harness adds that investigation layer before generation without taking ownership of test code.
 
-```
-/qa-explore
+The result is a traceable chain:
+
+```text
+ticket + test case
+        │
+        ▼
+  browser exploration ──► state/transition model ──► proposed risks
+                                                              │
+                                                human approves/rejects
+                                                              │
+                                                              ▼
+                                                     generator plan
+                                                              │
+                                                              ▼
+                                                   oracle validation
 ```
 
-**Input**: the ticket ID, and a test case (title + steps, however rough)
+## Core capabilities
 
-**Output**: `qa-artifacts/<ticket>/exploration.md`
+- **Snapshot-based exploration** — records the live flow, accessibility-tree elements, URLs, visible changes, and evidence gaps.
+- **State and transition modeling** — separates observed transitions from plausible transitions that were not walked.
+- **Human-gated risk review** — generates proposed risks; only the human marks them approved or rejected.
+- **Generator-compatible output** — writes `specs/<ticket>.plan.md` in a plain plan structure a test-generation agent can consume.
+- **Post-generation auditing** — checks generated assertions against approved oracles and can mutation-check assertion strength.
 
-Walks the flow the test case describes, once, using Playwright MCP in snapshot
-mode. Records what it actually saw — including anything the test case didn't
-mention, and anything it claimed that wasn't observed. Lists what can't be seen
-from the browser at all (persisted state, emails, background jobs). Also
-searches `tests/` for an existing seed file whose starting state matches this
-flow, and records the best candidate (or says plainly that none was found — it
-never creates one).
+## How the workflow works
 
-Nothing here is a test, a risk, or a recommendation. It's a factual record.
-
-## Stage 2: qa-model
-
-```
-/qa-model
-```
-
-**Input**: the ticket ID
-
-**Output**: `qa-artifacts/<ticket>/flow-model.md`
-
-Turns the raw observations into states and transitions. The most useful part of
-this output is the **Unobserved transitions** list — every transition that
-plausibly exists but wasn't walked in Stage 1. That list feeds directly into the
-risk table next.
-
-## Stage 3: qa-challenge (Human Approval Required)
-
-```
-/qa-challenge
+```mermaid
+flowchart LR
+    A[Ticket + existing test case] --> B[Stage 1: qa-explore]
+    B --> C[Stage 2: qa-model]
+    C --> D[Stage 3A: qa-challenge]
+    D --> E{Human reviews risks.md}
+    E -->|Approve or reject rows| F[Stage 3B: write plan]
+    F --> G[External test-generation agent]
+    G --> H[Stage 5: qa-validate]
+    H --> I[validation.md]
 ```
 
-Runs in two parts.
+The human approval step is intentional. The harness never silently decides which risks matter, and it never writes Playwright test code or seed files.
 
-**Part A — risk table.** Reads exploration.md and flow-model.md, produces:
+For the deeper artifact contract and boundaries, see [Architecture](docs/architecture.md).
 
-| ID | Step/State | Risk | Proposed oracle | Observable | Status |
-|----|------------|------|-----------------|------------|--------|
-| R1 | ...        | ...  | ...             | yes/no/partial | PROPOSED |
+## Stage outputs
 
-Every row starts `PROPOSED`. **You edit `risks.md` by hand** and set each row to
-`APPROVED` or `REJECTED`. Nothing in this harness ever does that for you.
+Each flow is identified by the ticket ID supplied by the human:
 
-- Approve a row if the risk is real and worth covering — even if `Observable` is
-  `no`. The gap becomes documented, not silently dropped.
-- Reject rows that don't matter, or that duplicate another row.
-- Don't touch `Proposed oracle` unless the oracle itself is wrong — it's meant to
-  state what would *actually* prove success, not what's convenient to check.
+| Stage | Input | Output |
+| --- | --- | --- |
+| `qa-explore` | Ticket ID, test case, confirmed non-production URL, interactive test account | `qa-artifacts/<ticket>/exploration.md` |
+| `qa-model` | Exploration artifact | `qa-artifacts/<ticket>/flow-model.md` |
+| `qa-challenge` Part A | Exploration and flow model | `qa-artifacts/<ticket>/risks.md` with `PROPOSED` rows |
+| Human review | Risk table | `APPROVED` / `REJECTED` statuses entered by the human only |
+| `qa-challenge` Part B | Approved risks and intact source-date chain | `specs/<ticket>.plan.md` plus generated mapping in `risks.md` |
+| External generator | The plan file and the consuming project's test setup | Generated test files in that project |
+| `qa-validate` | Mapping, plan, and generated tests | `qa-artifacts/<ticket>/validation.md` |
 
-**Stop here and review `risks.md` before continuing.**
+The `qa-artifacts/` and `specs/` directories are generated workflow output and are intentionally ignored by default. This repository documents and validates the process; it does not publish real investigation findings.
 
-**Part B — test plan.** Once you've approved rows, run the same prompt again and
-tell it to continue to Part B:
+## Tool adapters
 
-```
-/qa-challenge run Part B
-```
+The shared methodology lives in [`qa-harness/`](qa-harness/):
 
-**Output**: `specs/<ticket>.plan.md` — written (or appended to) in exactly the
-structure `playwright-test-planner` produces:
+- [`RULES.md`](qa-harness/RULES.md) is the source of truth for hard rules, safety boundaries, artifact paths, and stage order.
+- [`stages/`](qa-harness/stages/) contains the tool-agnostic instructions for exploration, modeling, challenge, and validation.
+- [`.github/prompts/`](.github/prompts/) provides GitHub Copilot prompt adapters.
+- [`.claude/skills/`](.claude/skills/) provides Claude Code skill adapters.
+- [`AGENTS.md`](AGENTS.md) provides Codex instructions.
+- [`CLAUDE.md`](CLAUDE.md) provides Claude Code repository instructions.
 
-```markdown
-# PROJ-1234 - Checkout Flow
+Playwright MCP configuration is kept per tool:
 
-## Application Overview
-<prose, written from what qa-explore actually observed>
+- [`.mcp.json`](.mcp.json) is the repository-level MCP configuration used by Claude Code.
+- [`.vscode/mcp.json`](.vscode/mcp.json) is the VS Code configuration used by the Copilot setup.
+- Codex users can register the server once with the command shown below.
 
-## Test Scenarios
+## Getting started
 
-### 1. PROJ-1234 - Checkout Flow
+This repository has no application runtime, package manifest, dependency install, Docker image, database, or built-in test suite. There is nothing to build before reading or adapting the harness.
 
-**Seed:** `tests/seed.spec.ts`
-
-#### 1.1. TC-01: <title from an approved risk>
-
-**File:** `tests/checkout/tc-01-....spec.ts`
-
-**Steps:**
-  1. <verified step>
-    - expect: <the approved oracle, in prose>
-```
-
-One `TC-<NN>` block per `APPROVED` risk row. If a risk's evidence isn't fully
-observable from the browser, its `expect:` still states the real oracle, plus a
-second `expect:` bullet flagging it as a GAP — never a weaker substitute
-assertion. If `specs/<ticket>.plan.md` already exists, existing `TC-<NN>`
-entries are never touched — new ones are appended, numbered onward from the
-highest one present.
-
-It also appends a **Generated mapping** section to the bottom of `risks.md`
-(never touching the risk table above it), recording which `TC-<NN>` and file
-each `Risk ID` produced. This is how `qa-validate` later checks the right test
-against the right approved risk.
-
-If `qa-explore` found no matching seed file, the plan still gets written, but
-you're told plainly that generation can't proceed until one exists — creating
-one isn't this harness's job.
-
-## Hand-off: playwright-test-generator
-
-This is the step the harness deliberately does not automate — and it needs no
-translation step, because `specs/<ticket>.plan.md` is already the artifact your
-generator expects.
-
-`playwright-test-generator` is a **custom agent** (`.agent.md`, bundled with its
-own MCP server), not a prompt file — so you don't invoke it with `/`. Instead:
-
-1. Open Copilot Chat, click the **agents dropdown** at the bottom of the panel
-2. Select **playwright-test-generator**
-3. Point it at `specs/<ticket>.plan.md`, exactly as you would with a
-   planner-produced plan
-
-The generator drives the browser itself to execute each step in the plan
-(that's how it verifies its own code before writing it), then saves one spec
-file per `TC-<NN>` entry.
-
-**Why no playwright-test-planner?** Its own instructions have it always explore
-the flow from scratch and invent its own scenarios — it has no mechanism to
-accept an external document as ground truth. Running it after `qa-challenge`
-risks it silently discarding your entire risk review and testing whatever it
-independently decided mattered, and would break `qa-validate`'s ability to
-trace a generated test back to a specific approved risk. So this harness routes
-straight to the generator: `qa-explore` / `qa-model` / `qa-challenge` are this
-harness's own stand-in for what the planner would otherwise do — with a human
-approval gate the planner doesn't have.
-
-## Stage 5: qa-validate
-
-Run this after `playwright-test-generator` has produced spec files from the plan.
-
-```
-/qa-validate
-```
-
-**Part A — oracle conformance.** Reads `risks.md`'s **Generated mapping**
-section to find, for each approved risk, which `TC-<NN>` and file it produced.
-Cross-references `specs/<ticket>.plan.md`'s `expect:` bullets for that `TC-<NN>`
-against the actual generated assertion, and checks it isn't weaker than what
-was approved. Writes findings to `qa-artifacts/<ticket>/validation.md`. Fixes
-nothing.
-
-**Part B — mutation check.** Run explicitly:
-
-```
-/qa-validate run Part B
-```
-
-Runs the specs and reports raw output. Then, for each passing test, temporarily
-mutates one expected value, re-runs it alone, and restores the original
-immediately. Any test that still passes after mutation goes under
-`ASSERTION TOO WEAK` in `validation.md` — meaning the assertion isn't actually
-checking what it claims to.
-
-Nothing here is described as "passing," "healthy," or "adequate." You decide
-what the raw output and the mutation results mean.
-
----
-
-## File structure
-
-```
-.github/
-  copilot-instructions.md         ← Harness rules (read once)
-  prompts/
-    qa-explore.prompt.md          ← Stage 1: walk the flow, find a matching seed
-    qa-model.prompt.md            ← Stage 2: state/transition model
-    qa-challenge.prompt.md        ← Stage 3: risk table + specs/<ticket>.plan.md
-    qa-validate.prompt.md         ← Stage 5: post-generation audit
-  agents/                         ← (already exists in your project — verify the
-                                     exact path) playwright-test-planner.agent.md,
-                                     playwright-test-generator.agent.md. Not part
-                                     of this harness; invoked via the agents
-                                     dropdown, not a slash command.
-.vscode/
-  mcp.json                        ← General-purpose Playwright MCP config, used
-                                     only by qa-explore/qa-validate — separate
-                                     from the generator's own bundled MCP server
-specs/
-  <ticket>.plan.md                ← Stage 3B output — the real artifact handed
-                                     to playwright-test-generator
-qa-artifacts/                     ← One folder per ticket, harness-internal
-  <ticket>/
-    exploration.md                ← Stage 1 output
-    flow-model.md                 ← Stage 2 output
-    risks.md                      ← Stage 3A output (+ Generated mapping,
-                                     appended by 3B) — YOU EDIT THE TABLE
-    validation.md                 ← Stage 5 output
-```
-
-## Ground rules
-
-- **One flow per session.** Reset the Copilot session before starting a second flow.
-- **This harness never writes test code**, before or after generation — including seed files. That stays with `playwright-test-generator`.
-- **`playwright-test-planner` is bypassed by design**, not by oversight — see above.
-- **`risks.md`'s Status column is a human-only field.** No prompt in this harness ever sets `APPROVED` or `REJECTED`. Its appended **Generated mapping** section is machine-written, but the table above it isn't.
-- **Existing `TC-<NN>` entries in a plan file are never rewritten**, only appended to.
-- **Snapshot mode only** — the accessibility tree, not screenshots or coordinates.
-- **Non-production only.** `qa-explore` stops and asks if the target URL looks like production. Once confirmed, the URL is recorded (it belongs in the plan) — credentials never are, anywhere.
-- **Staleness is tracked automatically** within `qa-artifacts/<ticket>/`. Each file records the date of the artifact it was built from. Re-running `qa-explore` will cause later stages to flag downstream files as stale.
-
-## Environment variables
+### 1. Clone the repository
 
 ```bash
-export BASE_URL="https://staging.example.com"
-export TEST_ACCOUNT_EMAIL="user@example.com"
-export TEST_ACCOUNT_PASSWORD="<password>"
+git clone https://github.com/Yasser132456/qa-investigation-harness.git
+cd qa-investigation-harness
 ```
 
-`qa-explore` asks for these interactively rather than reading them from env.
-Credentials are never written to disk; the URL is, once confirmed non-production.
+### 2. Choose an adapter
 
-## Workflow summary
+#### GitHub Copilot in VS Code
 
+Open the repository in VS Code. The prompt adapters under `.github/prompts/` and the Playwright MCP configuration under `.vscode/mcp.json` provide the Copilot-facing setup.
+
+#### Claude Code
+
+Open the repository with Claude Code. The root `.mcp.json` registers the Playwright MCP server, and the skills under `.claude/skills/` expose the four harness stages.
+
+#### Codex
+
+Register Playwright MCP once in the global Codex configuration:
+
+```bash
+codex mcp add playwright -- npx @playwright/mcp@latest --isolated --caps=core --snapshot-mode=full --timeout-action=30000 --timeout-navigation=30000 --timeout-settle=5000 --test-id-attribute=data-testid
 ```
-1. /qa-explore                   Input: ticket ID + test case → exploration.md
-                                  (also looks for a matching seed file)
-2. /qa-model                     Input: ticket ID              → flow-model.md
-3. /qa-challenge                 Input: ticket ID               → risks.md (all PROPOSED)
-   ↓ YOU HAND-EDIT risks.md: set each row to APPROVED / REJECTED ↓
-4. /qa-challenge run Part B                    → specs/<ticket>.plan.md
-                                  → risks.md gets a Generated mapping section
-5. Agents dropdown → playwright-test-generator → point it at specs/<ticket>.plan.md
-   (playwright-test-planner is intentionally skipped — see above)
-6. /qa-validate                  Input: ticket ID               → validation.md
-7. /qa-validate run Part B       — runs specs, mutation-checks assertions
+
+Then ask Codex to run a stage by name, supplying the ticket ID and test case where required. The full flow and safety rules are in [`AGENTS.md`](AGENTS.md).
+
+### 3. Run the stages in order
+
+The stage names are the same across adapters:
+
+1. `qa-explore` — provide an existing ticket ID and rough test case; confirm the target is non-production and provide credentials interactively.
+2. `qa-model` — build the state/transition model from the exploration artifact.
+3. `qa-challenge` — generate proposed risks, then stop for human review.
+4. Edit `qa-artifacts/<ticket>/risks.md` by hand and set rows to `APPROVED` or `REJECTED`.
+5. Run `qa-challenge` Part B to create the generator plan.
+6. Point the consuming project's test-generation agent at `specs/<ticket>.plan.md`.
+7. Run `qa-validate` after the generator has produced tests.
+
+### Environment and credentials
+
+The harness requires a non-production target URL and an interactive test account for browser exploration. Credentials are never written to repository files, artifacts, plans, or logs. The confirmed non-production URL may be recorded in the exploration/plan artifacts because the generator needs to know which environment the flow describes.
+
+## What this repository intentionally does not do
+
+- It does not create, edit, or suggest Playwright test code.
+- It does not create seed files.
+- It does not invent ticket IDs or test cases.
+- It does not run against production environments.
+- It does not mark risks approved or rejected for the human.
+- It does not replace the consuming project's test-generation agent.
+- It does not claim API, database, email, background-job, or persisted-state evidence is browser-observable when it is not.
+
+## Repository structure
+
+```text
+.
+├── .claude/skills/              # Claude Code stage adapters
+├── .github/prompts/             # GitHub Copilot stage adapters
+├── .vscode/mcp.json             # VS Code Playwright MCP configuration
+├── docs/
+│   ├── architecture.md          # Detailed workflow and artifact boundaries
+│   └── assets/                  # Repository mark and social-preview artwork
+├── qa-harness/
+│   ├── RULES.md                 # Shared rules and artifact contract
+│   ├── README.md                # Multi-tool usage guide
+│   └── stages/                  # Explore, model, challenge, validate
+├── AGENTS.md                    # Codex repository instructions
+├── CLAUDE.md                    # Claude Code repository instructions
+├── CONTRIBUTING.md              # Contribution workflow
+├── SECURITY.md                  # Security reporting and secret handling
+└── README.md
 ```
 
----
+## Engineering decisions
 
-**Questions?** Refer to `.github/copilot-instructions.md` for the full rule set.
+### One source of truth, thin adapters
+
+Rules and stage behavior are centralized in `qa-harness/`. Tool-specific files only provide the invocation shape and arguments for their host environment. This keeps methodology changes consistent across adapters.
+
+### Evidence before recommendation
+
+Stage 1 records observations only. Stage 2 models what was observed and what was not. Stage 3 proposes risks without approving them. Keeping these responsibilities separate makes the human review boundary visible and preserves traceability.
+
+### Real oracles, even when the browser cannot verify them
+
+The harness names the oracle that would actually prove a risk, including API or database checks that are not currently wired into the consuming test project. It records that gap instead of replacing the oracle with a weaker rendered-text assertion.
+
+## Development and contribution
+
+Changes to shared rules affect every adapter, so start with [`CONTRIBUTING.md`](CONTRIBUTING.md) and read [`qa-harness/RULES.md`](qa-harness/RULES.md) before editing stage instructions. Security concerns and accidentally exposed credentials belong in [`SECURITY.md`](SECURITY.md).
+
+## Roadmap and known limits
+
+The current repository is intentionally focused on the investigation layer. Potential future work includes additional tool adapters, automated documentation checks, and optional API/database oracle integrations for consuming projects. None of these are implemented here today.
+
+## License
+
+This project is available under the [MIT License](LICENSE).
+
+## GitHub metadata recommendations
+
+The available repository connector can inspect GitHub metadata but cannot update the repository description, topics, or social-preview setting from this environment. Recommended values:
+
+- **Description:** Risk-driven browser-flow investigation and human-reviewed test plans for Playwright test generation.
+- **Topics:** `playwright`, `test-automation`, `qa-engineering`, `software-testing`, `browser-automation`, `risk-based-testing`, `test-planning`, `developer-tools`, `llm-agents`, `claude-code`, `github-copilot`.
+- **Social preview asset:** [`docs/assets/qa-investigation-harness-social.svg`](docs/assets/qa-investigation-harness-social.svg), upload manually under GitHub repository settings → Social preview.
+- **Homepage/demo URL:** None verified; leave unset until a live documentation or demo site exists.
