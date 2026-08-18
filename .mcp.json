@@ -1,0 +1,17 @@
+{
+  "mcpServers": {
+    "playwright": {
+      "command": "npx",
+      "args": [
+        "@playwright/mcp@latest",
+        "--isolated",
+        "--caps=core",
+        "--snapshot-mode=full",
+        "--timeout-action=30000",
+        "--timeout-navigation=30000",
+        "--timeout-settle=5000",
+        "--test-id-attribute=data-testid"
+      ]
+    }
+  }
+}

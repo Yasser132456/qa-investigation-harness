@@ -1,0 +1,11 @@
+# Harness-generated investigation output — never publish real findings
+qa-artifacts/
+specs/*.plan.md
+
+# OS junk
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# Editor/session-local state
+.claude/settings.local.json
