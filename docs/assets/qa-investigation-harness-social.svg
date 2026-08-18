@@ -18,6 +18,7 @@
   <text x="112" y="154" fill="#56e0d0" font-family="Arial, Helvetica, sans-serif" font-size="24" font-weight="700" letter-spacing="4">OPEN-SOURCE QA TOOLING</text>
   <text x="108" y="258" fill="#f2f6ff" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="700">QA Investigation</text>
   <text x="108" y="330" fill="#f2f6ff" font-family="Arial, Helvetica, sans-serif" font-size="64" font-weight="700">Harness</text>
-  <text x="112" y="402" fill="#b8c5db" font-family="Arial, Helvetica, sans-serif" font-size="28">Risk-driven browser investigation for Playwright test generation.</text>
+  <text x="112" y="394" fill="#b8c5db" font-family="Arial, Helvetica, sans-serif" font-size="28">Risk-driven browser investigation for</text>
+  <text x="112" y="432" fill="#b8c5db" font-family="Arial, Helvetica, sans-serif" font-size="28">Playwright test generation.</text>
   <text x="112" y="500" fill="#73829c" font-family="Arial, Helvetica, sans-serif" font-size="22">observe  /  model  /  challenge  /  validate</text>
 </svg>
